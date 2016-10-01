@@ -1,0 +1,67 @@
+#!/bin/bash
+###Logscanner by Sebastian Neef modified by Sven-Erik Neve
+###www.gehaxelt.in
+###Version 1.1
+
+##Variables
+RESULTFILE='~/.logs/logscanner.log'
+if [ ! -d ~/tmp ] && mkdir ~/tmp
+##END Variables
+while getopts "s" options; do
+	case $options in
+		s) service=0
+			;;
+	esac
+done
+##Check if parameter is set
+if [ $1 ]
+then
+    SCANFILE=$1
+else
+    SCANFILE="$HOME/logs/access_log"
+    #Uberspace access_log path from ~
+    echo "Assuming that the path of access_log is logs/access_log."
+    echo "You can change the path over the first parameter"
+fi
+##END Check
+
+##Check if file exists
+if [ ! -f $SCANFILE ]
+then
+    echo "File does not exist" 1>&2
+    exit 1
+fi
+##END Check
+
+##Preparing logfile
+echo "##########" >> $RESULTFILE
+echo "Starting new scan at "$(date +%d-%m-%Y-%R) >> $RESULTFILE
+echo "Scanning $SCANFILE" >> $RESULTFILE
+echo "##########" >> $RESULTFILE
+##Preparing logfile
+
+##Scan for SQL Injections
+echo "Scanning for SQL Injections" >> $RESULTFILE
+cat $SCANFILE | cut -d' ' -f-7 | grep -i -E 'table_name|substring|union|column_name|from' >> $RESULTFILE && mail=1
+##END Scan
+
+##Scan for Cross Site Scripting (XSS)
+echo "Scanning for Cross Site Scripting (XSS)" >> $RESULTFILE
+cat $SCANFILE | cut -d' ' -f-7 | grep -i -E '\<script\>|alert|src\=|String\.FromCharCode|document\.write' >> $RESULTFILE && mail=1
+##END Scan
+
+##Scan for Local File Inclusion (LFI)
+echo "Scanning for Local File Inclusion (LFI)" >> $RESULTFILE
+cat $SCANFILE | cut -d' ' -f-7 | grep -i -E '\.\.\/|\/etc\/passwd|\/etc\/group|php\:\/\/filter|%00' >> $RESULTFILE && mail=1
+##END Scan
+
+##Finish
+echo "Finished scan" >> $RESULTFILE
+##END Finish
+
+if mail=1
+then
+	mail -s "Logscanner $USER" $USER < $RESULTFILE
+fi
+
+exit 0

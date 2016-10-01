@@ -1,0 +1,4 @@
+#!/bin/sh
+# MyUberspaceTools
+# Show user quota
+/usr/bin/quota -gsl

@@ -1,0 +1,120 @@
+#!/bin/sh
+# MyUberspaceTools
+# LetsEncrypt
+conf="$HOME/.config/letsencrypt"
+
+domain=${2:-example.org}
+log="$HOME/.logs/letsencrypt"
+
+cleanup_certificates() {
+  echo "WARNING: Going to remove ALL -0001, -0002 etc. files and directories"
+  echo "in ~/.config/letsencrypt - make sure there are no needed certificates there."
+  cd ${letsencrypt_dir}
+  
+  # this is a buggy workaround. Does not cover -0010 and greater numbers
+  # deletes all these files and directories without asking further.
+  # beware. May eat your dog.
+  for f in live/*-000[1-9]; do
+    echo "  deleting $f..."
+    rm -rf $f;
+  done
+  for f in archive/*-000[1-9]; do
+    echo "  deleting $f..."
+    rm -rf $f;
+  done
+  for f in renewal/*-000[1-9].conf; do
+    echo "  deleting $f..."
+    rm -rf $f;
+  done
+  echo "Cleanup done."
+}
+
+case "$1" in
+    prepare)
+    		if [ ! -f "$conf/cli.ini" ]; then
+		     uberspace-letsencrypt &> /dev/null
+			fi
+		files=$(ls $conf/$domain.conf 2> /dev/null | wc -l)
+		sample=$(ls $conf/$domain.conf.sample 2> /dev/null | wc -l)
+		if [ "$files" = "0" ]; then
+			if [ "$sample" = "1" ]; then
+				echo -e "Sample already exists\nPlease move $domain.conf.sample to $domain.conf or delete it."
+				exit 1
+			fi
+			echo ""
+	                echo -e "Create *.conf first please.\nAn example was create right now ($domain.conf.sample):\n"
+        	        echo -e "#Domain to be used as main domain\nmain=$domain\n" > $conf/$domain.conf.sample
+			echo -e "#Optionale domains to be used as alternative domains\n#remove hash if needed\n#sub=www.$domain\n" >> $conf/$domain.conf.sample
+			echo -e "#email to be used\n#delete next line for local user\nemail=hostmaster@$domain\n" >> $conf/$domain.conf.sample
+			cat $conf/$domain.conf.sample
+			echo "---------"
+			echo -e "Please check the above sample and edit if needed\n\npico $conf/$domain.conf.sample"
+			echo -e "and\nmv $conf/$domain.conf.sample $conf/$domain.conf\n\nor try again\n"
+			echo `basename "$(test -L "$0" && readlink "$0" || echo "$0")"`
+			echo ""
+		exit 1
+	        fi
+		for d in $conf/*.conf ; do
+		        main=`cat $d | gawk 'match($0, /^main=(.*)$/, a) {print a[1]}'`
+		        sub=`cat $d | gawk 'match($0, /^sub=(.*)$/, a) {print a[1]}'`
+		        email=`cat $d | gawk 'match($0, /^email=(.*)$/, a) {print a[1]}'`
+		        cat $conf/cli.ini > $conf/$main.cli.ini
+		        if [ ! -z "$sub" ]; then
+		            domains="$main,$sub";
+		        else
+		            domains="$main";
+		        fi
+		        if [ ! -z "$email" ]; then sed -i -r -e s/'^email = .*'/'email = '$email/ $conf/$main.cli.ini; fi
+		        sed -i -r -e s/'^domains = .*'/'domains = '$domains/ $conf/$main.cli.ini;
+		    done
+		    ;;
+    create)
+		if [ ! -f "$conf/cli.ini" ]; then
+		    echo -e "Please prepare default structure first.\nUsage: $1 prepare [domain]\n"
+		    exit 1;
+		fi
+		files=$(ls $conf/*.cli.ini 2> /dev/null | wc -l)
+		if [ **"$files" = "0"** ]; then    
+                	echo -e "No domains prepared.\nRun '$1 prepare' first."
+			exit 1;
+		fi
+                if [ "$domain" = "example.org" ]; then
+			for c in $conf/*.cli.ini ; do
+			 # When you're done you can use the official Let's Encrypt client by executing
+				letsencrypt certonly --agree-tos -c $c
+			done
+			for d in `ls $conf/live/`; do
+				uberspace-prepare-certificate -k $conf/live/$d/privkey.pem -c $conf/live/$d/cert.pem
+			done
+		else
+			if [ ! -f "$conf/$domain.cli.ini" ]; then
+				echo -e "No domains prepared.\nRun '$1 prepare $domain' first."
+				exit 1;
+			fi
+			letsencrypt certonly --agree-tos -c $conf/$domain.cli.ini
+			uberspace-prepare-certificate -k $conf/live/$domain/privkey.pem -c $conf/live/$domain/cert.pem
+		fi
+		;;
+    renew)
+            for d in `ls $conf/live/`; do
+		        if [ ! -f $conf/$d.cli.ini ]; then
+		            echo "Missing $d.cli.ini" >> $log/letsencrypt.fail.log 
+		            exit 1
+		        fi
+	    done
+	    for d in `ls $conf/live/`; do
+		letsencrypt certonly --agree-tos --renew-by-default -c $conf/$d.cli.ini
+		echo $d
+		echo -e "\n-----------\nRenewing $d certificate..." >> $log/letsencrypt_log
+		date=`openssl x509 -in $conf/live/$d/cert.pem  -text -noout|grep "Not Before"`
+		echo "$date" >> $log/letsencrypt_log
+#		cat $HOME/.local/share/letsencrypt/logs/letsencrypt_log >> $log/letsencrypt_log
+		uberspace-prepare-certificate -k $conf/live/$d/privkey.pem -c $conf/live/$d/cert.pem
+	    done
+            ;;
+    *)
+            echo "Usage: `basename $0` prepare|create|renew [domain]"
+            exit 1
+            ;;
+esac
+exit 0
