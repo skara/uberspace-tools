@@ -58,7 +58,7 @@ chmod +x ~/bin/mu-quota
 
 echo "Installing logscanner service..."
 cp $this/bin/mu-logscanner ~/bin/
-chmod +x mu-logscanner
+chmod +x ~/bin/mu-logscanner
 svc="mu-svc-logscanner"
 test -d ~/etc/$svc && rm -rf ~/etc/$svc
 runwhen-conf ~/etc/$svc ~/bin/mu-logscanner -s > /dev/null
