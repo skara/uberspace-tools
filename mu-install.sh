@@ -5,14 +5,46 @@
 # get current dir
 this="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-## Logrotate
-mkdir ~/.logs
-cp $this/mu-logrotate.conf ~/etc/
-sed -i -e "s|^HOME|$HOME|" ~/etc/mu-logrotate.conf
+function nomail() {
+nomail1
+#services
+#misc
+#logrotate
+#letsencrypt
+}
 
+all() {
+nomail1
+mailstuff1
+}
+
+nomail1() {
+echo "nomail1"
+}
+mailstuff1() {
+echo "mailstuff1"
+}
+services() {
 ## Installing Services
 test -d ~/service || uberspace-setup-svscan
+}
 
+logrotate() {
+## Logrotate
+mkdir ~/.logs
+cp $this/etc/mu-logrotate.conf ~/etc/
+sed -i -e "s|^HOME|$HOME|" ~/etc/mu-logrotate.conf
+echo "Installing logrotate service..."
+svc="mu-svc-logrotate"
+test -d ~/etc/$svc && rm -rf ~/etc/$svc
+runwhen-conf ~/etc/mu-svc-logrotate /bin/nice
+# nasty workaround
+sed -i -e "s|/bin/nice|nice -n 19 ionice -c3 /usr/sbin/logrotate -s ~/etc/mu-svc-logrotate/logrotate.status ~/etc/mu-logrotate.conf|" ~/etc/$svc/run
+sed -i -e "s/^RUNWHEN=.*/RUNWHEN=\",H=`echo $((RANDOM % 4))`,M=`echo $((RANDOM % 60))`\"/" ~/etc/$svc/run
+ln -sf ~/etc/$svc ~/service
+}
+
+letsencrypt() {
 ## Letsencrypt
 mkdir ~/.logs/letsencrypt/
 uberspace-letsencrypt
@@ -24,8 +56,9 @@ test -d ~/etc/$svc && rm -rf ~/etc/$svc
 runwhen-conf ~/etc/$svc ~/bin/mu-letsencrypt > /dev/null
 sed -i -e "s/^RUNWHEN=.*/RUNWHEN=\",d=\/2,H=`echo $((RANDOM % 4))`,M=`echo $((RANDOM % 60))`\"/" ~/etc/$svc/run
 ln -sf ~/etc/$svc ~/service
+}
 
-
+mailstuff() {
 ## Mail stuff
 # install DSPAM
 echo "Installing DSPAM service..."
@@ -50,7 +83,9 @@ chmod 600 ~/.mailfilter
 # install mailfilter into qmail-default
 echo "Activating maildrop for all users..."
 echo -n "|maildrop" > ~/.qmail-default
+}
 
+misc() {
 ## misc
 cp $this/bin/mu-quota ~/bin/
 chmod +x ~/bin/mu-quota
@@ -58,9 +93,31 @@ chmod +x ~/bin/mu-quota
 
 echo "Installing logscanner service..."
 cp $this/bin/mu-logscanner ~/bin/
-chmod +x mu-logscanner
+chmod +x ~/bin/mu-logscanner
 svc="mu-svc-logscanner"
 test -d ~/etc/$svc && rm -rf ~/etc/$svc
 runwhen-conf ~/etc/$svc ~/bin/mu-logscanner -s > /dev/null
 sed -i -e "s/^RUNWHEN=.*/RUNWHEN=\",H=`awk 'BEGIN { srand(); printf("%d\n",rand()*24) }'`\"/" ~/etc/$svc/run
 ln -sf ~/etc/$svc ~/service
+}
+
+PS3='Was soll gemacht werden: '
+options=("Alles" "ohne Mail" "Entfernen" "Beenden")
+select opt in "${options[@]}"
+do
+    case $opt in
+        "Alles")
+            all
+            ;;
+        "ohne Mail")
+            nomail
+            ;;
+        "Entfernen")
+            echo "you chose choice 3"
+            ;;
+        "Beenden")
+            break
+            ;;
+        *) echo invalid option;;
+    esac
+done
