@@ -7,7 +7,7 @@ this="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 ## Logrotate
 mkdir ~/.logs
-cp $this/mu-logrotate.conf ~/etc/
+cp $this/etc/mu-logrotate.conf ~/etc/
 sed -i -e "s|^HOME|$HOME|" ~/etc/mu-logrotate.conf
 
 ## Installing Services
