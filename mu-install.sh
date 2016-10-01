@@ -5,13 +5,22 @@
 # get current dir
 this="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
+## Installing Services
+test -d ~/service || uberspace-setup-svscan
+
+
 ## Logrotate
 mkdir ~/.logs
 cp $this/etc/mu-logrotate.conf ~/etc/
 sed -i -e "s|^HOME|$HOME|" ~/etc/mu-logrotate.conf
-
-## Installing Services
-test -d ~/service || uberspace-setup-svscan
+echo "Installing logrotate service..."
+svc="mu-svc-logrotate"
+test -d ~/etc/$svc && rm -rf ~/etc/$svc
+runwhen-conf ~/etc/mu-svc-logrotate /bin/nice
+# nasty workaround
+sed -i -e "s|/bin/nice|nice -n 19 ionice -c3 /usr/sbin/logrotate -s ~/etc/mu-svc-logrotate/logrotate.status ~/etc/mu-logrotate.conf|" ~/etc/$svc/run
+sed -i -e "s/^RUNWHEN=.*/RUNWHEN=\",d=\/2,H=`echo $((RANDOM % 4))`,M=`echo $((RANDOM % 60))`\"/" ~/etc/$svc/run
+ln -sf ~/etc/$svc ~/service
 
 ## Letsencrypt
 mkdir ~/.logs/letsencrypt/
@@ -50,6 +59,7 @@ chmod 600 ~/.mailfilter
 # install mailfilter into qmail-default
 echo "Activating maildrop for all users..."
 echo -n "|maildrop" > ~/.qmail-default
+
 
 ## misc
 cp $this/bin/mu-quota ~/bin/
