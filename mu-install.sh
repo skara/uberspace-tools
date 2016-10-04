@@ -5,25 +5,18 @@
 # get current dir
 this="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-function nomail() {
-nomail1
-#services
-#misc
-#logrotate
-#letsencrypt
+nomail() {
+services
+misc
+logrotate
+letsencrypt
 }
 
 all() {
-nomail1
-mailstuff1
+nomail
+mailstuff
 }
 
-nomail1() {
-echo "nomail1"
-}
-mailstuff1() {
-echo "mailstuff1"
-}
 services() {
 ## Installing Services
 test -d ~/service || uberspace-setup-svscan
@@ -85,6 +78,7 @@ echo "Activating maildrop for all users..."
 echo -n "|maildrop" > ~/.qmail-default
 }
 
+
 misc() {
 ## misc
 cp $this/bin/mu-quota ~/bin/
@@ -113,7 +107,7 @@ do
             nomail
             ;;
         "Entfernen")
-            echo "you chose choice 3"
+            echo "Leider noch nicht eingebaut"
             ;;
         "Beenden")
             break
