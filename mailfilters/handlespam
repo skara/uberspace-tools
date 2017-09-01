@@ -1,0 +1,24 @@
+# Handle Spam. Take care of re-trained messages from dspam-learn.
+import REDELIVER_SPAM
+if ( $REDELIVER_SPAM )
+{
+  DESTDIR="$MAILDIR/.Spam"
+  SILENT_DESTDIR=$SILENT_SPAM
+  include "$HOME/.mailfilters/deliver"
+}
+
+import REDELIVER_HAM
+if ( ! $REDELIVER_HAM )
+{
+  if ( $SPAMASSASSIN_ENABLE )
+  {
+    # Show mail to SpamAssassin
+    include "$HOME/.mailfilters/spamassassin"
+  }
+
+  if ( $DSPAM_ENABLE )
+  {
+    # Show mail to DSPAM
+    include "$HOME/.mailfilters/dspam"
+  }
+}

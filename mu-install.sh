@@ -55,8 +55,11 @@ mailstuff() {
 ## Mail stuff
 # install DSPAM
 echo "Installing DSPAM service..."
-test -d ~/etc/dspam-learn && rm -rf ~/etc/dspam-learn
-runwhen-conf ~/etc/dspam-learn $this/dspam-learn > /dev/null
+cp $this/bin/dspam-learn ~/bin/dspam-learn
+chmod +x ~/bin/dspam-learn
+svc="mu-dspam-learn"
+test -d ~/etc/$svc && rm -rf ~/etc/dspam-learn
+runwhen-conf ~/etc/$svc $this/bin/dspam-learn > /dev/null
 sed -i -e "s/^RUNWHEN=.*/RUNWHEN=\",M=`awk 'BEGIN { srand(); printf("%d\n",rand()*60) }'`\"/" ~/etc/$svc/run
 ln -sf ~/etc/$svc ~/service
 
@@ -72,6 +75,7 @@ ln -sf ~/etc/$svc ~/service
 echo "Installing mailfilter file to ~/.mailfilter..."
 cp $this/tpl/mu-mailfilter.tpl ~/.mailfilter
 chmod 600 ~/.mailfilter
+cp $this/mailfilters/* ~/.mailfilters/
 
 # install mailfilter into qmail-default
 echo "Activating maildrop for all users..."

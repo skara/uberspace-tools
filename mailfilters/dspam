@@ -1,0 +1,27 @@
+# check folder structure
+`test -d "$MAILDIR/.Spam"`
+if( $RETURNCODE == 1 )
+{
+  `maildirmake "$MAILDIR/.Spam"`
+}
+`test -d "$MAILDIR/.Spam.Learn as Ham"`
+if( $RETURNCODE == 1 )
+{
+  `maildirmake "$MAILDIR/.Spam.Learn as Ham"`
+}
+`test -d "$MAILDIR/.Spam.Learn as Spam"`
+if( $RETURNCODE == 1 )
+{
+  `maildirmake "$MAILDIR/.Spam.Learn as Spam"`
+}
+
+# show the mail to DSPAM
+xfilter "/package/host/localhost/dspam/bin/dspam --mode=teft --deliver=innocent,spam --stdout"
+
+# process SPAM
+if ( /^X-DSPAM-Result: Spam/ )
+{
+  DESTDIR="$MAILDIR/.Spam"
+  SILENT_DESTDIR=$SILENT_SPAM
+  include "$HOME/.mailfilters/deliver"
+}

@@ -1,0 +1,11 @@
+# show the mail to SpamAssassin
+xfilter "/usr/bin/spamc"
+
+
+## process SPAM
+if ( /^X-Spam-Level: \*{$SPAMASSASSIN_MINSPAMSCORE,}$/ )
+{
+  DESTDIR="$MAILDIR/.Spam"
+  SILENT_DESTDIR=$SILENT_SPAM
+  include "$HOME/.mailfilters/deliver"
+}

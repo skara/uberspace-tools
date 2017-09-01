@@ -4,6 +4,7 @@ set -euo pipefail
 #IFS=$'\n\t'
 ########################################################################
 # 2015-02-23 Christopher Hirschmann c.hirschmann@jonaspasche.com
+# 2014-05-10 Modifications for re-delivery by Thorsten Koester
 # 2016-02-01 Christian González christian.gonzalez@nerdocs.at
 ########################################################################
 #
@@ -23,21 +24,23 @@ set -euo pipefail
 ########################################################################
 #
 # This script will look for a system user's primary maildir
-# $HOME/Maildir and possible vMailMgr maildirs under $HOME/users/
-# and search them for folders indicating a certain DSPAM setup:
+# $HOME/Maildir and possible vMailMgr maildir under
+# $HOME/users/ and search them for folders indicating a
+# certain DSPAM setup:
 #
 # \
 #  \___ Inbox
 #   \
 #    \___ Junk || Spam || Junk-E-Mail
 #          \
-#           \___ als Spam lernen
+#           \___ Learn as Ham
 #            \
-#             \___ als Ham lernen
+#             \___ Learn as Spam
 #
-# If it finds this folder structure in any maildir, it will show files
-# from the folders 'als Ham lernen' and 'als Spam lernen' to DSPAM (so
-# it can learn) and after that it will delete them.
+# If it finds this folder structure in any maildir, it will
+# show files from the folders 'Learn as Ham' and 'Learn as
+# Spam' to DSPAM (so it can learn) and after that it will
+# re-deliver them via maildrop.
 #
 # You can make this script more verbose with '-v'.
 #
@@ -108,6 +111,7 @@ do
                 if [ "${DRYRUN}" == "0" ];
                 then
                     ${BE_NICE} /package/host/localhost/dspam/bin/dspam --class=spam --source=error --stdout < "${spammail}";
+                    REDELIVER_SPAM=1 /usr/bin/maildrop $HOME/.mailfilter < "${spammail}";
                     rm -f "${spammail}";
                 fi
             done
@@ -125,6 +129,7 @@ do
                 if [ "${DRYRUN}" == "0" ];
                 then
                     ${BE_NICE} /package/host/localhost/dspam/bin/dspam --class=innocent --source=error --stdout < "${hammail}";
+                    REDELIVER_HAM=1 /usr/bin/maildrop $HOME/.mailfilter < "${hammail}";
                     rm -f "${hammail}";
                 fi
             done
